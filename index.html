@@ -3,58 +3,42 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, shrink-to-fit=no"
-    />
-    <title>Student File Renaming Tool</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.85.1/build/stlite.css"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Student File Renamer</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.71.0/build/stlite.css" />
   </head>
   <body>
     <div id="root"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@stlite/browser@0.85.1/build/stlite.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.71.0/build/stlite.js"></script>
     <script>
       async function launchApp() {
+        const rootElement = document.getElementById("root");
         try {
-          // Fetch app.py and naming_conventions.csv from your repository
-          // We use cache: "no-cache" to ensure users always get your latest updates
-          const [appResponse, csvResponse] = await Promise.all([
+          const [appRes, csvRes] = await Promise.all([
             fetch("./main.py", { cache: "no-cache" }),
             fetch("./naming_conventions.csv", { cache: "no-cache" }),
           ]);
 
-          if (!appResponse.ok || !csvResponse.ok) {
-            throw new Error("Failed to fetch application files from repository.");
+          if (!appRes.ok || !csvRes.ok) {
+            throw new Error("Could not find main.py or naming_conventions.csv in your repo.");
           }
 
-          const appCode = await appResponse.text();
-          const csvData = await csvResponse.text();
+          const appCode = await appRes.text();
+          const csvData = await csvRes.text();
 
-          stlite.mount(
-            {
-              requirements: ["pandas"], // Required for processing naming_conventions.csv
-              entrypoint: "main.py",
-              files: {
-                "main.py": appCode,
-                "naming_conventions.csv": csvData,
-              },
+          stlite.mount({
+            requirements: ["pandas"],
+            entrypoint: "main.py",
+            files: {
+              "main.py": appCode,
+              "naming_conventions.csv": csvData,
             },
-            document.getElementById("root")
-          );
+          }, rootElement);
+
         } catch (error) {
-          console.error("Initialization error:", error);
-          document.getElementById("root").innerHTML = 
-            `<div style="padding: 20px; color: #ff4b4b;">
-              <h3>Initialization Error</h3>
-              <p>${error.message}</p>
-              <p>Please ensure main.py and naming_conventions.csv are in the same folder as index.html.</p>
-            </div>`;
+          rootElement.innerHTML = `<div style="padding:20px; color:#ff4b4b;"><h3>Launch Error</h3><p>${error.message}</p></div>`;
         }
       }
-
       launchApp();
     </script>
   </body>
