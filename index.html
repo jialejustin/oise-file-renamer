@@ -3,214 +3,59 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>Student File Renamer</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.90.3/build/stlite.css" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <title>Student File Renaming Tool</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/style.css"
+    />
   </head>
   <body>
     <div id="root"></div>
-    <script type="module">
-      import { mount } from "https://cdn.jsdelivr.net/npm/@stlite/browser@0.90.3/build/stlite.js"
-      mount({
-        requirements: ["pandas"],
-        entrypoint: "main.py",
-        files: {
-          "main.py": `
-import streamlit as st
-import pandas as pd
-import zipfile
-import base64
-import hashlib
-from io import BytesIO
-from collections import Counter
-
-# --- 1. Load Naming Conventions ---
-@st.cache_data
-def load_conventions():
-    try:
-        df = pd.read_csv('naming_conventions.csv')
-        df = df.fillna("")
-        return df.to_dict('records')
-    except Exception as e:
-        st.error(f"Error loading naming_conventions.csv: {e}")
-        return []
-
-CONVENTIONS = load_conventions()
-DROPDOWN_OPTIONS = [f"{c['Form Type']} ({c['Document Identifier']})" for c in CONVENTIONS]
-DROPDOWN_OPTIONS.append("➕ Manual Entry / Not Found...")
-
-MODIFIERS = {
-    "None": "", "Email": "-EMAIL", "Rationale": "-RAT", 
-    "Letter of Support": "-LOS", "Verification of illness": "-VOI"
-}
-
-# --- Prevent double config error ---
-if 'page_config_set' not in st.session_state:
-    st.set_page_config(page_title="Student File Renaming Tool", layout="wide", page_icon="🎓")
-    st.session_state.page_config_set = True
-
-st.markdown("""
-    <style>
-    .block-container { padding-top: 3.5rem !important; padding-bottom: 1rem !important; }
-    .dynamic-header { font-size: 1.5rem; font-weight: 700; color: #31333F; margin-bottom: 1.5rem; line-height: 1.2; }
-    [data-testid="stFileUploaderFileData"], [data-testid="stFileUploader"] section + div { display: none !important; }
-    div[data-testid="stSidebar"] button {
-        background-color: transparent !important; border: none !important; color: #31333F !important;
-        text-align: left !important; padding: 4px 10px !important; font-size: 13px !important;
-        min-height: 28px !important;
-    }
-    div[data-testid="stSidebar"] button[kind="primary"] { background-color: #ff4b4b !important; color: white !important; font-weight: 600 !important; }
-    </style>
-""", unsafe_allow_html=True)
-
-def get_file_hash(file_bytes):
-    return hashlib.md5(file_bytes).hexdigest()
-
-def render_smart_header(uploaded_file):
-    bytes_data = uploaded_file.getvalue()
-    base64_pdf = base64.b64encode(bytes_data).decode('utf-8')
-    
-    # NOTE: Escaped the dollar signs and split the script tag
-    js_blob_code = f"""
+    <script src="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/stlite.js"></script>
     <script>
-    function openPdf() {{
-        const b64 = "{base64_pdf}";
-        const byteChars = atob(b64);
-        const byteNums = new Array(byteChars.length);
-        for (let i = 0; i < byteChars.length; i++) {{ byteNums[i] = byteChars.charCodeAt(i); }}
-        const blob = new Blob([new Uint8Array(byteNums)], {{type: 'application/pdf'}});
-        window.open(URL.createObjectURL(blob), '_blank');
-    }}
-    </scr""" + """ipt>
-    <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
-        <button onclick="openPdf()" style="
-            background-color: #f0f2f6; color: #31333F; border: 1px solid #d1d5db; 
-            padding: 6px 14px; border-radius: 6px; cursor: pointer; 
-            font-size: 13px; font-weight: 600; transition: 0.2s;">
-            🖥️ Open in New Tab
-        </button>
-    </div>
-    """
-    
-    h1, h2 = st.columns([3, 1])
-    with h1: st.markdown(f'<div class="dynamic-header">📄 {uploaded_file.name}</div>', unsafe_allow_html=True)
-    with h2: st.components.v1.html(js_blob_code, height=45)
+      async function launchApp() {
+        try {
+          // Fetch main.py and naming_conventions.csv from your repository
+          // Cache: "no-cache" ensures coworkers always get your latest code push
+          const [appResponse, csvResponse] = await Promise.all([
+            fetch("./main.py", { cache: "no-cache" }),
+            fetch("./naming_conventions.csv", { cache: "no-cache" }),
+          ]);
 
-if 'file_idx' not in st.session_state: st.session_state.file_idx = 0
-if 'renamed_files' not in st.session_state: st.session_state.renamed_files = {} 
-if 'student_id' not in st.session_state: st.session_state.student_id = ""
-if 'excluded_files' not in st.session_state: st.session_state.excluded_files = set()
+          if (!appResponse.ok || !csvResponse.ok) {
+            throw new Error("Failed to fetch main.py or naming_conventions.csv.");
+          }
 
-with st.sidebar:
-    st.header("1. Settings")
-    st.session_state.student_id = st.text_input("Student Number:", value=st.session_state.student_id, placeholder="e.g. 1009011016")
-    st.divider()
-    st.header("2. File Queue")
-    uploaded_files_raw = st.file_uploader("Upload", type=["pdf", "docx", "png", "jpg", "jpeg"], accept_multiple_files=True, label_visibility="collapsed")
-    uploaded_files = list(uploaded_files_raw)[::-1] if uploaded_files_raw else []
-    
-    if uploaded_files:
-        hashes = {f.name: get_file_hash(f.getvalue()) for f in uploaded_files}
-        counts = Counter(hashes.values())
-        if st.session_state.file_idx >= len(uploaded_files): st.session_state.file_idx = 0
-        for i, f in enumerate(uploaded_files):
-            ex = f.name in st.session_state.excluded_files
-            dat = st.session_state.renamed_files.get(f.name, {})
-            done = (dat.get('selection') is not None or dat.get('manual_id','') != '' or dat.get('global_extra','') != '')
-            icon = "❌" if ex else ("✅" if done else "●")
-            warn = "⚠️" if counts[hashes[f.name]] > 1 else ""
-            if st.button(f"{icon} {f.name} {warn}", key=f"nav_{i}", use_container_width=True, type="primary" if st.session_state.file_idx == i else "secondary"):
-                st.session_state.file_idx = i; st.rerun()
+          const appCode = await appResponse.text();
+          const csvData = await csvResponse.text();
 
-if uploaded_files:
-    current_file = uploaded_files[st.session_state.file_idx]
-    is_ex = current_file.name in st.session_state.excluded_files
-    curr_hash = get_file_hash(current_file.getvalue())
-    dups = [f.name for f in uploaded_files if get_file_hash(f.getvalue()) == curr_hash and f.name != current_file.name]
+          stlite.mount(
+            {
+              requirements: ["pandas"], // WASM environment installs this in the browser RAM
+              entrypoint: "main.py",     // Set the entry point to your renamed file
+              files: {
+                "main.py": appCode,
+                "naming_conventions.csv": csvData,
+              },
+            },
+            document.getElementById("root")
+          );
+        } catch (error) {
+          console.error("Initialization error:", error);
+          document.getElementById("root").innerHTML = 
+            `<div style="padding: 20px; color: #ff4b4b; font-family: sans-serif;">
+              <h3>Initialization Error</h3>
+              <p>${error.message}</p>
+              <p>Verify that <b>main.py</b> and <b>naming_conventions.csv</b> are in the same folder as this index.html file.</p>
+            </div>`;
+        }
+      }
 
-    if current_file.name not in st.session_state.renamed_files:
-        st.session_state.renamed_files[current_file.name] = {'selection': None, 'manual_id': '', 'modifier': 'None', 'csv_extra': '', 'global_extra': '', 'filename': current_file.name}
-    
-    state = st.session_state.renamed_files[current_file.name]
-    col_preview, col_controls = st.columns([2.1, 1])
-    
-    with col_preview:
-        render_smart_header(current_file)
-        ext = current_file.name.split('.')[-1].lower()
-        if ext == "pdf":
-            b64_embed = base64.b64encode(current_file.getvalue()).decode('utf-8')
-            st.markdown(f'<iframe src="data:application/pdf;base64,{b64_embed}" width="100%" height="900px" style="border:none; border-radius:8px;"></iframe>', unsafe_allow_html=True)
-        elif ext in ["png", "jpg", "jpeg"]:
-            st.image(current_file, use_container_width=True)
-        else:
-            st.info("📂 Word Doc: Preview not available.")
-
-    with col_controls:
-        if dups: st.warning(f"⚠️ **Duplicate Content:** Identical to {', '.join(dups)}.")
-        if is_ex: st.warning("File excluded.")
-        else:
-            st.subheader(f"Labelling ({st.session_state.file_idx + 1}/{len(uploaded_files)})")
-            sel = st.selectbox("Type:", options=DROPDOWN_OPTIONS, index=DROPDOWN_OPTIONS.index(state['selection']) if state['selection'] in DROPDOWN_OPTIONS else None, placeholder="Choose type...", key=f"sel_{current_file.name}")
-            if sel:
-                manual = (sel == "➕ Manual Entry / Not Found...")
-                pre = st.text_input("ID:", value=state['manual_id'], key=f"man_{current_file.name}").strip().upper() if manual else next(c['Document Identifier'] for c in CONVENTIONS if f"{c['Form Type']} ({c['Document Identifier']})" == sel).strip()
-                csv_l = "" if manual else next(c.get('Additional Fields', "") for c in CONVENTIONS if f"{c['Form Type']} ({c['Document Identifier']})" == sel)
-                mod = st.radio("Modifier:", options=list(MODIFIERS.keys()), index=list(MODIFIERS.keys()).index(state['modifier']), horizontal=True, key=f"mod_{current_file.name}")
-                csv_v = st.text_input(f"{csv_l}:", value=state['csv_extra'], key=f"csv_ex_{current_file.name}").strip().replace(" ", "-") if csv_l else ""
-                glb = st.text_input("Info:", value=state['global_extra'], key=f"glb_{current_file.name}").strip().replace(" ", "-")
-                
-                sid = st.session_state.student_id.strip() or "NOID"
-                fname = "_".join([p for p in [pre + MODIFIERS[mod], sid, csv_v, glb] if p]) + f".{current_file.name.split('.')[-1]}"
-                st.session_state.renamed_files[current_file.name].update({'filename': fname, 'selection': sel, 'manual_id': pre if manual else "", 'modifier': mod, 'csv_extra': csv_v, 'global_extra': glb})
-                st.info(f"Proposed: **{fname}**")
-
-        st.divider()
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("⬅️ Previous", disabled=st.session_state.file_idx == 0, use_container_width=True):
-                st.session_state.file_idx -= 1; st.rerun()
-        with c2:
-            if st.button("Next ➡️", disabled=st.session_state.file_idx == len(uploaded_files)-1, use_container_width=True):
-                st.session_state.file_idx += 1; st.rerun()
-        with st.expander("🛠️ Advanced"):
-            if st.button("🚫 Exclude" if not is_ex else "➕ Include", use_container_width=True):
-                if is_ex: st.session_state.excluded_files.remove(current_file.name)
-                else: st.session_state.excluded_files.add(current_file.name)
-                st.rerun()
-
-    if st.session_state.renamed_files:
-        st.divider()
-        with st.expander("📦 Download Batch", expanded=True):
-            active = [f for f in uploaded_files if f.name not in st.session_state.excluded_files]
-            names = [st.session_state.renamed_files[f.name]['filename'] for f in active if f.name in st.session_state.renamed_files and st.session_state.renamed_files[f.name]['selection'] is not None]
-            cnts = Counter(names); trk = {}
-            z_buf = BytesIO()
-            with zipfile.ZipFile(z_buf, "w") as z:
-                for f in active:
-                    d = st.session_state.renamed_files.get(f.name)
-                    if d and d['selection'] is not None:
-                        fn = d['filename']
-                        if cnts[fn] > 1:
-                            trk[fn] = trk.get(fn, 0) + 1
-                            if trk[fn] > 1:
-                                b, e = fn.rsplit('.', 1); fn = f"{b}_{trk[fn]-1}.{e}"
-                        z.writestr(fn, f.getvalue())
-            if len(z.filelist) > 0:
-                st.download_button("📥 Download ZIP", data=z_buf.getvalue(), file_name=f"Renamed_Files_{st.session_state.student_id}.zip", use_container_width=True)
-else:
-    st.markdown("<div class='dynamic-header'>📁 Student File Renaming Tool</div>", unsafe_allow_html=True)
-    st.info("👈 Upload files in the sidebar to begin.")
-`,
-          "naming_conventions.csv": `Form Type,Document Identifier,Additional Fields
-Application Form,APPLICATION,
-Transcript,TRNS,
-E-Transcript,ETRNS,
-Offer of Admission,ADMISSION,
-Program extension,EXT,End session
-Thesis Supervision Form,SUP,
-Email,EMAIL,YYYY-MM-DD`
-        },
-      }, document.getElementById("root"))
+      launchApp();
     </script>
   </body>
 </html>
