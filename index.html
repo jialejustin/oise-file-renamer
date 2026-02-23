@@ -3,59 +3,54 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, shrink-to-fit=no"
-    />
-    <title>Student File Renaming Tool</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/style.css"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Student File Renamer</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/style.css" />
   </head>
   <body>
     <div id="root"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/stlite.js"></script>
+    <script 
+      src="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/stlite.js"
+      onload="launchApp()"
+    ></script>
+
     <script>
       async function launchApp() {
+        const rootElement = document.getElementById("root");
         try {
-          // Fetch main.py and naming_conventions.csv from your repository
-          // Cache: "no-cache" ensures coworkers always get your latest code push
-          const [appResponse, csvResponse] = await Promise.all([
+          // Fetch main.py and naming_conventions.csv
+          const [appRes, csvRes] = await Promise.all([
             fetch("./main.py", { cache: "no-cache" }),
             fetch("./naming_conventions.csv", { cache: "no-cache" }),
           ]);
 
-          if (!appResponse.ok || !csvResponse.ok) {
-            throw new Error("Failed to fetch main.py or naming_conventions.csv.");
+          if (!appRes.ok || !csvRes.ok) {
+            throw new Error("Could not find main.py or naming_conventions.csv in the repo.");
           }
 
-          const appCode = await appResponse.text();
-          const csvData = await csvResponse.text();
+          const appCode = await appRes.text();
+          const csvData = await csvRes.text();
 
-          stlite.mount(
+          // Mount the app once stlite is confirmed ready
+          window.stlite.mount(
             {
-              requirements: ["pandas"], // WASM environment installs this in the browser RAM
-              entrypoint: "main.py",     // Set the entry point to your renamed file
+              requirements: ["pandas"],
+              entrypoint: "main.py",
               files: {
                 "main.py": appCode,
                 "naming_conventions.csv": csvData,
               },
             },
-            document.getElementById("root")
+            rootElement
           );
         } catch (error) {
-          console.error("Initialization error:", error);
-          document.getElementById("root").innerHTML = 
-            `<div style="padding: 20px; color: #ff4b4b; font-family: sans-serif;">
+          rootElement.innerHTML = `
+            <div style="padding: 20px; color: #ff4b4b; font-family: sans-serif;">
               <h3>Initialization Error</h3>
               <p>${error.message}</p>
-              <p>Verify that <b>main.py</b> and <b>naming_conventions.csv</b> are in the same folder as this index.html file.</p>
             </div>`;
         }
       }
-
-      launchApp();
     </script>
   </body>
 </html>
