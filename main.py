@@ -6,8 +6,6 @@ import hashlib
 from io import BytesIO
 from collections import Counter
 
-st.set_page_config(page_title="Student File Renaming Tool", layout="wide", page_icon="🎓")
-
 # --- 1. Load Naming Conventions ---
 @st.cache_data
 def load_conventions():
@@ -28,6 +26,8 @@ MODIFIERS = {
     "None": "", "Email": "-EMAIL", "Rationale": "-RAT", 
     "Letter of Support": "-LOS", "Verification of illness": "-VOI"
 }
+
+st.set_page_config(page_title="Student File Renaming Tool", layout="wide", page_icon="🎓")
 
 # --- 2. CSS for Exact Layout & Visibility ---
 st.markdown("""
@@ -208,3 +208,4 @@ else:
     st.markdown("<div class='dynamic-header'>📁 Student File Renaming Tool</div>", unsafe_allow_html=True)
 
     st.info("👈 Upload files in the sidebar to begin.")
+
