@@ -3,31 +3,59 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
-    <title>Student File Renamer</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.39.0/build/stlite.css"/>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <title>Student File Renaming Tool</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/style.css"
+    />
   </head>
   <body>
     <div id="root"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.39.0/build/stlite.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/stlite.js"></script>
     <script>
-      // Function to fetch file content as text
-      const fetchFile = (url) => fetch(url).then((res) => res.text());
+      async function launchApp() {
+        try {
+          // Fetch main.py and naming_conventions.csv from your repository
+          // Cache: "no-cache" ensures coworkers always get your latest code push
+          const [appResponse, csvResponse] = await Promise.all([
+            fetch("./main.py", { cache: "no-cache" }),
+            fetch("./naming_conventions.csv", { cache: "no-cache" }),
+          ]);
 
-      // Fetch app.py and naming_conventions.csv from the repo
-      Promise.all([
-        fetchFile("./main.py"),
-        fetchFile("./naming_conventions.csv")
-      ]).then(([appCode, csvData]) => {
-        stlite.mount({
-          requirements: ["pandas"], // WASM will install pandas on the fly
-          files: {
-            "main.py": appCode,
-            "naming_conventions.csv": csvData
-          },
-          entrypoint: "main.py",
-        }, document.getElementById("root"));
-      });
+          if (!appResponse.ok || !csvResponse.ok) {
+            throw new Error("Failed to fetch main.py or naming_conventions.csv.");
+          }
+
+          const appCode = await appResponse.text();
+          const csvData = await csvResponse.text();
+
+          stlite.mount(
+            {
+              requirements: ["pandas"], // WASM environment installs this in the browser RAM
+              entrypoint: "main.py",     // Set the entry point to your renamed file
+              files: {
+                "main.py": appCode,
+                "naming_conventions.csv": csvData,
+              },
+            },
+            document.getElementById("root")
+          );
+        } catch (error) {
+          console.error("Initialization error:", error);
+          document.getElementById("root").innerHTML = 
+            `<div style="padding: 20px; color: #ff4b4b; font-family: sans-serif;">
+              <h3>Initialization Error</h3>
+              <p>${error.message}</p>
+              <p>Verify that <b>main.py</b> and <b>naming_conventions.csv</b> are in the same folder as this index.html file.</p>
+            </div>`;
+        }
+      }
+
+      launchApp();
     </script>
   </body>
 </html>
