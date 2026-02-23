@@ -8,30 +8,36 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/style.css" />
   </head>
   <body>
-    <div id="root"></div>
-    <script 
-      src="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/stlite.js"
-      onload="launchApp()"
-    ></script>
+    <div id="root">
+      <div style="padding: 50px; font-family: sans-serif; text-align: center;">
+        <h2>🎓 Initializing Renamer...</h2>
+        <p>This may take a few seconds as the Python engine boots in your browser.</p>
+        <p id="status-msg" style="color: #666;">Loading stlite library...</p>
+      </div>
+    </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/stlite.js"></script>
+    
     <script>
       async function launchApp() {
-        const rootElement = document.getElementById("root");
+        const status = document.getElementById("status-msg");
         try {
-          // Fetch main.py and naming_conventions.csv
+          status.innerText = "Fetching main.py and conventions...";
+          
+          // Use absolute-style relative paths to prevent 404s on GitHub Pages subfolders
           const [appRes, csvRes] = await Promise.all([
             fetch("./main.py", { cache: "no-cache" }),
             fetch("./naming_conventions.csv", { cache: "no-cache" }),
           ]);
 
-          if (!appRes.ok || !csvRes.ok) {
-            throw new Error("Could not find main.py or naming_conventions.csv in the repo.");
-          }
+          if (!appRes.ok) throw new Error(`Could not find main.py (Status: ${appRes.status})`);
+          if (!csvRes.ok) throw new Error(`Could not find naming_conventions.csv (Status: ${csvRes.status})`);
 
           const appCode = await appRes.text();
           const csvData = await csvRes.text();
 
-          // Mount the app once stlite is confirmed ready
+          status.innerText = "Mounting Python environment (WASM)...";
+
           window.stlite.mount(
             {
               requirements: ["pandas"],
@@ -41,15 +47,24 @@
                 "naming_conventions.csv": csvData,
               },
             },
-            rootElement
+            document.getElementById("root")
           );
         } catch (error) {
-          rootElement.innerHTML = `
-            <div style="padding: 20px; color: #ff4b4b; font-family: sans-serif;">
-              <h3>Initialization Error</h3>
+          console.error(error);
+          document.getElementById("root").innerHTML = `
+            <div style="padding: 50px; color: #ff4b4b; font-family: sans-serif;">
+              <h3>🛑 Launch Error</h3>
               <p>${error.message}</p>
+              <p style="font-size: 0.8em; color: #666;">Check the browser console (F12) for details.</p>
             </div>`;
         }
+      }
+
+      // Explicitly wait for the stlite script to be ready
+      if (window.stlite) {
+        launchApp();
+      } else {
+        window.addEventListener("load", launchApp);
       }
     </script>
   </body>
