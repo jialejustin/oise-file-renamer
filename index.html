@@ -22,7 +22,7 @@
           // Fetch app.py and naming_conventions.csv from your repository
           // We use cache: "no-cache" to ensure users always get your latest updates
           const [appResponse, csvResponse] = await Promise.all([
-            fetch("./app.py", { cache: "no-cache" }),
+            fetch("./main.py", { cache: "no-cache" }),
             fetch("./naming_conventions.csv", { cache: "no-cache" }),
           ]);
 
@@ -36,9 +36,9 @@
           stlite.mount(
             {
               requirements: ["pandas"], // Required for processing naming_conventions.csv
-              entrypoint: "app.py",
+              entrypoint: "main.py",
               files: {
-                "app.py": appCode,
+                "main.py": appCode,
                 "naming_conventions.csv": csvData,
               },
             },
@@ -50,7 +50,7 @@
             `<div style="padding: 20px; color: #ff4b4b;">
               <h3>Initialization Error</h3>
               <p>${error.message}</p>
-              <p>Please ensure app.py and naming_conventions.csv are in the same folder as index.html.</p>
+              <p>Please ensure main.py and naming_conventions.csv are in the same folder as index.html.</p>
             </div>`;
         }
       }
