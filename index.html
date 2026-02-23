@@ -3,69 +3,59 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>Student File Renamer</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/style.css" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <title>Student File Renaming Tool</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/style.css"
+    />
   </head>
   <body>
-    <div id="root">
-      <div style="padding: 50px; font-family: sans-serif; text-align: center;">
-        <h2>🎓 Initializing Renamer...</h2>
-        <p>This may take a few seconds as the Python engine boots in your browser.</p>
-        <p id="status-msg" style="color: #666;">Loading stlite library...</p>
-      </div>
-    </div>
-
+    <div id="root"></div>
     <script src="https://cdn.jsdelivr.net/npm/@stlite/browser@0.64.1/build/stlite.js"></script>
-    
     <script>
       async function launchApp() {
-        const status = document.getElementById("status-msg");
         try {
-          status.innerText = "Fetching main.py and conventions...";
-          
-          // Use absolute-style relative paths to prevent 404s on GitHub Pages subfolders
-          const [appRes, csvRes] = await Promise.all([
-            fetch("./main.py", { cache: "no-cache" }),
+          // Fetch app.py and naming_conventions.csv from your repository
+          // We use cache: "no-cache" to ensure users always get your latest updates
+          const [appResponse, csvResponse] = await Promise.all([
+            fetch("./app.py", { cache: "no-cache" }),
             fetch("./naming_conventions.csv", { cache: "no-cache" }),
           ]);
 
-          if (!appRes.ok) throw new Error(`Could not find main.py (Status: ${appRes.status})`);
-          if (!csvRes.ok) throw new Error(`Could not find naming_conventions.csv (Status: ${csvRes.status})`);
+          if (!appResponse.ok || !csvResponse.ok) {
+            throw new Error("Failed to fetch application files from repository.");
+          }
 
-          const appCode = await appRes.text();
-          const csvData = await csvRes.text();
+          const appCode = await appResponse.text();
+          const csvData = await csvResponse.text();
 
-          status.innerText = "Mounting Python environment (WASM)...";
-
-          window.stlite.mount(
+          stlite.mount(
             {
-              requirements: ["pandas"],
-              entrypoint: "main.py",
+              requirements: ["pandas"], // Required for processing naming_conventions.csv
+              entrypoint: "app.py",
               files: {
-                "main.py": appCode,
+                "app.py": appCode,
                 "naming_conventions.csv": csvData,
               },
             },
             document.getElementById("root")
           );
         } catch (error) {
-          console.error(error);
-          document.getElementById("root").innerHTML = `
-            <div style="padding: 50px; color: #ff4b4b; font-family: sans-serif;">
-              <h3>🛑 Launch Error</h3>
+          console.error("Initialization error:", error);
+          document.getElementById("root").innerHTML = 
+            `<div style="padding: 20px; color: #ff4b4b;">
+              <h3>Initialization Error</h3>
               <p>${error.message}</p>
-              <p style="font-size: 0.8em; color: #666;">Check the browser console (F12) for details.</p>
+              <p>Please ensure app.py and naming_conventions.csv are in the same folder as index.html.</p>
             </div>`;
         }
       }
 
-      // Explicitly wait for the stlite script to be ready
-      if (window.stlite) {
-        launchApp();
-      } else {
-        window.addEventListener("load", launchApp);
-      }
+      launchApp();
     </script>
   </body>
 </html>
