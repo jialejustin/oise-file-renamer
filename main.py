@@ -6,6 +6,8 @@ import hashlib
 from io import BytesIO
 from collections import Counter
 
+st.set_page_config(page_title="Student File Renaming Tool", layout="wide", page_icon="🎓")
+
 # --- 1. Load Naming Conventions ---
 @st.cache_data
 def load_conventions():
@@ -26,8 +28,6 @@ MODIFIERS = {
     "None": "", "Email": "-EMAIL", "Rationale": "-RAT", 
     "Letter of Support": "-LOS", "Verification of illness": "-VOI"
 }
-
-st.set_page_config(page_title="Student File Renaming Tool", layout="wide", page_icon="🎓")
 
 # --- 2. CSS for Exact Layout & Visibility ---
 st.markdown("""
@@ -206,4 +206,5 @@ if uploaded_files:
                 st.download_button("📥 Download ZIP", data=z_buf.getvalue(), file_name=f"Renamed_Files_{st.session_state.student_id}.zip", use_container_width=True)
 else:
     st.markdown("<div class='dynamic-header'>📁 Student File Renaming Tool</div>", unsafe_allow_html=True)
+
     st.info("👈 Upload files in the sidebar to begin.")
