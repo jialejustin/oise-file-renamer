@@ -1,0 +1,70 @@
+﻿Form Type,Document Identifier,Additional Fields
+Application Form,APPLICATION,
+Transcript,TRNS,
+E-Transcript,ETRNS,
+"Admissions Test Scores (GMAT, GRE, English language tests)",TESTSCORE,
+Offer of Admission,ADMISSION,
+Non-standard Admission,NONSTANDARDADMISSION,
+Conditons Satisfied,CONDSATISFIED,
+Qualifying Research Paper,QRPAPPROVAL,
+Deferral of Admission,DEF,
+Change of Start Date,CHANGESTARTDATE,
+Collaborative Specialization Acceptance/Transfer Form,COLLAB,
+Letter of Reference,Reference,
+Change of Registration Status Request,CHANGEREGSTATUS,Session
+Add/Drop Course,CRSAD,Course code
+Non-Standard Collaborative Program Application,NONSTANDARDCOLLABAPP,
+CIDE Collab Document,CIDE,
+Leave of Absence,LOA,Start session
+Reinstatement Prior to Expiration Time Limit /Reregistration,REREG  ,Session
+Reinstatement After Time Limit ,REINSTATEMENT ,Session
+Reinstatement Rationale Letter,REINSTATEMENTRAT,Session
+Program Withdrawl,WITHDRAWL,
+Individual Research and Reading Course,IRR,Course code
+Individual Research and Reading Course Bibliography,IRR-BIB,Course code
+Degree Transfer,DEGTRF,
+Program Transfer,PROGTRF,
+Study/Safety Abroad Form,ABROAD,
+Transfer Credit,CRSTRF,Course code
+Course Exemption,CRSEXMP,Course code
+Course Extension,CRSEXT,Course code
+Program extension,EXT,End session
+Late Grade Submission,LATEGR,Course code
+Grade Change,GRDCHANGE,Course code
+Equity Requirement,EQREQ,
+Funding Letter,FUNDING,
+Annual Doctoral Progress Report/Form,DOCPROGRESS,YYYY-YYYY
+Social Sciences and Humanities Research Council (SSHRC) Progress Report,SSHRCPROG,
+Visiting Student Form,VISIT,
+Ontario Visiting Graduate Student (OVGS),OVGS,
+Canadian University Graduate Transfer Agreement (CUGTA),CUGTA,
+Thesis Proposal/Abstract Form,PROP,
+Thesis Proposal Confirmation,PROPCONFIRM,
+Thesis Proposal Hearing,PROPHEAR,
+Thesis Supervision Form,SUP,
+GEA,GEA,
+Masters Research Project Supervisory Approval,MRPSUP,
+Ancillary Fees Summary Reports,ANCILLARYFEES,
+Basis of Admission Letters (Technological Education),BASISADMISS,
+Dual Registration,DUALREG,
+Emphasis,EMPHASIS,
+Enrollment Letter,ENROLLMENT,
+Fees (related),FEES,
+Grade submission forms and lists (to collect grade information),GRADESHEET,
+Name change form,NAMECHANGE,
+Gender change form,GENDERCHANGE,
+Parental Grant Application,PARENTAPP,
+Childcare Application,CHILDAPP,
+Comprehensive Exam Memo ,COMPSMEMO ,
+Masters Research Project Completion Memo,MRPMEMO,
+Degree recommendation (Master),MAREC,Session
+Doctoral Candidacy Nomination Form,CANDIDACY,
+Doctoral Candidacy Extension Form,CANDIDACYEXT,Extended to (YYYY-MM-DD)
+Doctoral Candidacy Confirmation,CANDCONFIRM,
+Certificate/Conformation of Completion (Doctoral),COMPLETION,
+Doctoral Final Oral Exam Nomination,FOE,
+Application to Graduate,APPGRAD,
+Late Application to Graduate,LATEAPPGRAD,
+Balance of Degree Fee Summary,BOD,
+OGS/QEII-GSST applications,OGS,
+Email,EMAIL,YYYY-MM-DD
