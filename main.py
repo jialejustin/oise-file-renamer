@@ -6,7 +6,13 @@ import hashlib
 from io import BytesIO
 from collections import Counter
 
-# --- 1. Load Naming Conventions ---
+# --- 1. Session State Guard ---
+# Prevents the "set_page_config() can only be called once" error in browser environments
+if 'page_config_done' not in st.session_state:
+    st.set_page_config(page_title="Student File Renaming Tool", layout="wide", page_icon="🎓")
+    st.session_state.page_config_done = True
+
+# --- 2. Load Naming Conventions ---
 @st.cache_data
 def load_conventions():
     """Reads naming_conventions.csv and returns a cleaned list."""
@@ -15,7 +21,6 @@ def load_conventions():
         df = df.fillna("")
         return df.to_dict('records')
     except Exception as e:
-        st.error(f"Error loading naming_conventions.csv: {e}")
         return []
 
 CONVENTIONS = load_conventions()
@@ -27,35 +32,21 @@ MODIFIERS = {
     "Letter of Support": "-LOS", "Verification of illness": "-VOI"
 }
 
-st.set_page_config(page_title="Student File Renaming Tool", layout="wide", page_icon="🎓")
-
-# --- 2. CSS for Exact Layout & Visibility ---
+# --- 3. CSS for Exact Layout ---
 st.markdown("""
     <style>
     .block-container { padding-top: 3.5rem !important; padding-bottom: 1rem !important; }
-    
-    .dynamic-header {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #31333F;
-        margin-bottom: 1.5rem;
-        line-height: 1.2;
-    }
-
-    /* Hide default uploader file list */
+    .dynamic-header { font-size: 1.5rem; font-weight: 700; color: #31333F; margin-bottom: 1.5rem; line-height: 1.2; }
     [data-testid="stFileUploaderFileData"], [data-testid="stFileUploader"] section + div { display: none !important; }
-    
-    /* Compact Sidebar Styling */
     div[data-testid="stSidebar"] button {
         background-color: transparent !important; border: none !important; color: #31333F !important;
         text-align: left !important; padding: 4px 10px !important; font-size: 13px !important;
-        min-height: 28px !important;
     }
     div[data-testid="stSidebar"] button[kind="primary"] { background-color: #ff4b4b !important; color: white !important; font-weight: 600 !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. Utility & JavaScript Logic ---
+# --- 4. Utility & JavaScript Logic ---
 def get_file_hash(file_bytes):
     """Identifies content duplicates via MD5 hashing."""
     return hashlib.md5(file_bytes).hexdigest()
@@ -65,6 +56,7 @@ def render_smart_header(uploaded_file):
     bytes_data = uploaded_file.getvalue()
     base64_pdf = base64.b64encode(bytes_data).decode('utf-8')
     
+    # Properly escaped script for stlite browser compatibility
     js_blob_code = f"""
     <script>
     function openPdf() {{
@@ -75,22 +67,21 @@ def render_smart_header(uploaded_file):
         const blob = new Blob([new Uint8Array(byteNums)], {{type: 'application/pdf'}});
         window.open(URL.createObjectURL(blob), '_blank');
     }}
-    </script>
+    </scr""" + """ipt>
     <div style="display: flex; justify-content: flex-end; align-items: center; height: 100%;">
         <button onclick="openPdf()" style="
             background-color: #f0f2f6; color: #31333F; border: 1px solid #d1d5db; 
             padding: 6px 14px; border-radius: 6px; cursor: pointer; 
-            font-size: 13px; font-weight: 600; transition: 0.2s;">
+            font-size: 13px; font-weight: 600; text-decoration: none !important; transition: 0.2s;">
             🖥️ Open in New Tab
         </button>
     </div>
     """
-    
     h1, h2 = st.columns([3, 1])
     with h1: st.markdown(f'<div class="dynamic-header">📄 {uploaded_file.name}</div>', unsafe_allow_html=True)
     with h2: st.components.v1.html(js_blob_code, height=45)
 
-# --- 4. Sidebar & State ---
+# --- 5. State Management ---
 if 'file_idx' not in st.session_state: st.session_state.file_idx = 0
 if 'renamed_files' not in st.session_state: st.session_state.renamed_files = {} 
 if 'student_id' not in st.session_state: st.session_state.student_id = ""
@@ -102,8 +93,6 @@ with st.sidebar:
     st.divider()
     st.header("2. File Queue")
     uploaded_files_raw = st.file_uploader("Upload", type=["pdf", "docx", "png", "jpg", "jpeg"], accept_multiple_files=True, label_visibility="collapsed")
-    
-    # Simple reversal for chronological selection
     uploaded_files = list(uploaded_files_raw)[::-1] if uploaded_files_raw else []
     
     if uploaded_files:
@@ -113,19 +102,19 @@ with st.sidebar:
         for i, f in enumerate(uploaded_files):
             ex = f.name in st.session_state.excluded_files
             dat = st.session_state.renamed_files.get(f.name, {})
-            # Done check: logic fixed to ignore default initialization
+            # Done check logic fixed for checkmark visibility
             done = (dat.get('selection') is not None or dat.get('manual_id','') != '' or dat.get('global_extra','') != '')
             icon = "❌" if ex else ("✅" if done else "●")
             warn = "⚠️" if counts[hashes[f.name]] > 1 else ""
             if st.button(f"{icon} {f.name} {warn}", key=f"nav_{i}", use_container_width=True, type="primary" if st.session_state.file_idx == i else "secondary"):
                 st.session_state.file_idx = i; st.rerun()
 
-# --- 5. Main Content Area ---
+# --- 6. Main Content Area ---
 if uploaded_files:
     current_file = uploaded_files[st.session_state.file_idx]
     is_ex = current_file.name in st.session_state.excluded_files
     
-    # Content Duplicate Alert
+    # MD5 Content Duplicate Warning
     curr_hash = get_file_hash(current_file.getvalue())
     dups = [f.name for f in uploaded_files if get_file_hash(f.getvalue()) == curr_hash and f.name != current_file.name]
 
@@ -144,23 +133,23 @@ if uploaded_files:
         elif ext in ["png", "jpg", "jpeg"]:
             st.image(current_file, use_container_width=True)
         else:
-            st.info("📂 Word Document: Download to verify content.")
-            st.download_button("⬇️ Download Original", data=current_file, file_name=current_file.name)
+            st.info("📂 File type not supported for browser preview.")
 
     with col_controls:
         if dups: st.warning(f"⚠️ **Duplicate Content:** Identical to {', '.join(dups)}.")
         if is_ex: st.warning("File excluded from batch.")
         else:
             st.subheader(f"Labelling ({st.session_state.file_idx + 1}/{len(uploaded_files)})")
-            # No default selection
-            sel = st.selectbox("Type:", options=DROPDOWN_OPTIONS, index=DROPDOWN_OPTIONS.index(state['selection']) if state['selection'] in DROPDOWN_OPTIONS else None, placeholder="Choose type...", key=f"sel_{current_file.name}")
+            # Uses index=None for a clean start
+            sel = st.selectbox("Type:", options=DROPDOWN_OPTIONS, index=DROPDOWN_OPTIONS.index(state['selection']) if state['selection'] in DROPDOWN_OPTIONS else None, key=f"sel_{current_file.name}")
+            
             if sel:
                 manual = (sel == "➕ Manual Entry / Not Found...")
                 pre = st.text_input("ID:", value=state['manual_id'], key=f"man_{current_file.name}").strip().upper() if manual else next(c['Document Identifier'] for c in CONVENTIONS if f"{c['Form Type']} ({c['Document Identifier']})" == sel).strip()
                 csv_l = "" if manual else next(c.get('Additional Fields', "") for c in CONVENTIONS if f"{c['Form Type']} ({c['Document Identifier']})" == sel)
                 mod = st.radio("Modifier:", options=list(MODIFIERS.keys()), index=list(MODIFIERS.keys()).index(state['modifier']), horizontal=True, key=f"mod_{current_file.name}")
-                csv_v = st.text_input(f"{csv_l}:", value=state['csv_extra'], key=f"csv_ex_{current_file.name}").strip().replace(" ", "-") if csv_l else ""
-                glb = st.text_input("Info:", value=state['global_extra'], key=f"glb_{current_file.name}").strip().replace(" ", "-")
+                csv_v = st.text_input(f"{csv_l or 'Extra info'}:", value=state['csv_extra'], key=f"csv_ex_{current_file.name}").strip().replace(" ", "-") if csv_l else ""
+                glb = st.text_input("Manual notes:", value=state['global_extra'], key=f"glb_{current_file.name}").strip().replace(" ", "-")
                 
                 sid = st.session_state.student_id.strip() or "NOID"
                 fname = "_".join([p for p in [pre + MODIFIERS[mod], sid, csv_v, glb] if p]) + f".{current_file.name.split('.')[-1]}"
@@ -188,7 +177,7 @@ if uploaded_files:
             active = [f for f in uploaded_files if f.name not in st.session_state.excluded_files]
             names_map = [st.session_state.renamed_files[f.name]['filename'] for f in active if f.name in st.session_state.renamed_files and st.session_state.renamed_files[f.name]['selection'] is not None]
             
-            # Revised Versioning Logic
+            # Smart Versioning: first file clean, then _1, _2
             cnts = Counter(names_map); trk = {}
             z_buf = BytesIO()
             with zipfile.ZipFile(z_buf, "w") as z:
@@ -202,10 +191,7 @@ if uploaded_files:
                                 b, e = fn.rsplit('.', 1); fn = f"{b}_{trk[fn]-1}.{e}"
                         z.writestr(fn, f.getvalue())
             if len(z.filelist) > 0:
-                st.write(f"Files in ZIP: **{len(z.filelist)}**")
                 st.download_button("📥 Download ZIP", data=z_buf.getvalue(), file_name=f"Renamed_Files_{st.session_state.student_id}.zip", use_container_width=True)
 else:
     st.markdown("<div class='dynamic-header'>📁 Student File Renaming Tool</div>", unsafe_allow_html=True)
-
     st.info("👈 Upload files in the sidebar to begin.")
-
